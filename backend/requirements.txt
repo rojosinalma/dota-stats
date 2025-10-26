@@ -10,7 +10,7 @@ celery==5.3.4
 flower==2.0.1
 redis==5.0.1
 httpx==0.25.1
-authlib==1.2.1
+authlib==1.6.5
 itsdangerous==2.1.2
 python-multipart==0.0.6
 click==8.1.7
