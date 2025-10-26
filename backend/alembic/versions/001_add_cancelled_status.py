@@ -18,7 +18,7 @@ depends_on = None
 
 def upgrade() -> None:
     # Add CANCELLED value to jobstatus enum
-    op.execute("ALTER TYPE jobstatus ADD VALUE IF NOT EXISTS 'cancelled'")
+    op.execute("ALTER TYPE jobstatus ADD VALUE IF NOT EXISTS 'CANCELLED'")
 
 
 def downgrade() -> None:

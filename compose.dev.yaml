@@ -50,6 +50,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./logs/backend:/app/logs
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   celery-worker:
@@ -66,7 +67,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: celery -A app.tasks.celery_app worker --loglevel=debug
+      - ./logs/celery-worker:/app/logs
+    command: celery -A app.tasks.celery_app worker --loglevel=debug --logfile=/app/logs/error.log
 
   celery-beat:
     build:
@@ -82,7 +84,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: celery -A app.tasks.celery_app beat --loglevel=debug
+      - ./logs/celery-beat:/app/logs
+    command: celery -A app.tasks.celery_app beat --loglevel=debug --logfile=/app/logs/error.log
 
   # Flower (Celery Monitoring)
   flower:
@@ -99,7 +102,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: celery -A app.tasks.celery_app flower --port=5555
+      - ./logs/flower:/app/logs
+    command: celery -A app.tasks.celery_app flower --port=5555 --logging=error --log-file-prefix=/app/logs/error.log
 
   # Frontend with Vite dev server
   frontend:

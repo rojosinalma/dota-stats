@@ -50,6 +50,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./logs/backend:/app/logs
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Celery Worker
@@ -67,7 +68,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: celery -A app.tasks.celery_app worker --loglevel=info
+      - ./logs/celery-worker:/app/logs
+    command: celery -A app.tasks.celery_app worker --loglevel=info --logfile=/app/logs/error.log
 
   # Celery Beat (Scheduler)
   celery-beat:
@@ -84,7 +86,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: celery -A app.tasks.celery_app beat --loglevel=info
+      - ./logs/celery-beat:/app/logs
+    command: celery -A app.tasks.celery_app beat --loglevel=info --logfile=/app/logs/error.log
 
   # Flower (Celery Monitoring)
   flower:
@@ -101,7 +104,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-    command: celery -A app.tasks.celery_app flower --port=5555
+      - ./logs/flower:/app/logs
+    command: celery -A app.tasks.celery_app flower --port=5555 --logging=error --log-file-prefix=/app/logs/error.log
 
   # React Frontend
   frontend:
