@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Dota Stats"
     DEBUG: bool = False
+    LOG_LEVEL: Literal["INFO", "DEBUG"] = "INFO"
 
     # Database
     POSTGRES_USER: str
@@ -43,7 +44,8 @@ class Settings(BaseSettings):
 
     # Sync Configuration
     SYNC_INTERVAL_MINUTES: int = 60
-    RATE_LIMIT_DELAY: float = 1.0  # seconds between API calls
+    VALVE_RATE_LIMIT_DELAY: float = 7.0  # seconds between Valve API calls
+    OPENDOTA_RATE_LIMIT_DELAY: float = 1.0  # seconds between OpenDota API calls
 
     # Security
     SECRET_KEY: str

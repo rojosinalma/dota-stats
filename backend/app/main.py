@@ -7,7 +7,7 @@ from .logging_config import setup_logging
 import logging
 
 # Setup logging
-setup_logging("/app/logs/error.log")
+setup_logging(log_level=settings.LOG_LEVEL, log_file_path="/app/logs/app.log")
 logger = logging.getLogger(__name__)
 
 app = FastAPI(

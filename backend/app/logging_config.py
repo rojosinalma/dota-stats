@@ -4,28 +4,35 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 
-def setup_logging(log_file_path: str = "/app/logs/error.log"):
+def setup_logging(log_level: str = "INFO", log_file_path: str = "/app/logs/app.log"):
     """
-    Configure logging to output to both stdout and error file.
+    Configure logging to output to both stdout and log file.
 
-    - INFO and above goes to stdout
-    - ERROR and above goes to file
-    - File logs are rotated (max 10MB, keep 5 backups)
+    Args:
+        log_level: Either "INFO" or "DEBUG"
+            - INFO: Logs INFO and above to both stdout and file
+            - DEBUG: Logs DEBUG and above (everything) to both stdout and file
+        log_file_path: Path to the log file
+
+    File logs are rotated (max 10MB, keep 5 backups)
     """
     # Create logs directory if it doesn't exist
     log_path = Path(log_file_path)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Convert log level string to logging constant
+    numeric_level = getattr(logging, log_level.upper(), logging.INFO)
+
     # Root logger configuration
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(numeric_level)
 
     # Remove existing handlers to avoid duplicates
     root_logger.handlers.clear()
 
-    # Console handler (stdout) - INFO and above
+    # Console handler (stdout) - matches root logger level
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(numeric_level)
     console_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
@@ -33,7 +40,7 @@ def setup_logging(log_file_path: str = "/app/logs/error.log"):
     console_handler.setFormatter(console_formatter)
     root_logger.addHandler(console_handler)
 
-    # File handler - ERROR and above only
+    # File handler - matches root logger level
     # Rotate when file reaches 10MB, keep 5 backup files
     file_handler = RotatingFileHandler(
         log_file_path,
@@ -41,7 +48,7 @@ def setup_logging(log_file_path: str = "/app/logs/error.log"):
         backupCount=5,
         encoding='utf-8'
     )
-    file_handler.setLevel(logging.ERROR)
+    file_handler.setLevel(numeric_level)
     file_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
@@ -50,7 +57,7 @@ def setup_logging(log_file_path: str = "/app/logs/error.log"):
     root_logger.addHandler(file_handler)
 
     # Log startup
-    logging.info("Logging configured: INFO+ to stdout, ERROR+ to file")
-    logging.info(f"Error log file: {log_file_path}")
+    logging.info(f"Logging configured: {log_level}+ to stdout and file")
+    logging.info(f"Log file: {log_file_path}")
 
     return root_logger
