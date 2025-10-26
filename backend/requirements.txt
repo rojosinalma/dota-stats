@@ -12,6 +12,6 @@ redis==5.0.1
 httpx==0.25.1
 authlib==1.2.1
 itsdangerous==2.1.2
-python-multipart==0.0.6
+python-multipart==0.0.18
 click==8.1.7
 watchdog==3.0.0
