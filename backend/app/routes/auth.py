@@ -98,6 +98,11 @@ async def get_me(user: User = Depends(get_current_user)):
 @router.post("/logout")
 async def logout():
     """Logout current user"""
-    response = RedirectResponse(url="/")
-    response.delete_cookie(settings.SESSION_COOKIE_NAME)
+    from fastapi.responses import JSONResponse
+    response = JSONResponse(content={"message": "Logged out successfully"})
+    response.delete_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        path="/",
+        samesite="lax"
+    )
     return response

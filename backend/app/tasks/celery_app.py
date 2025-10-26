@@ -1,6 +1,9 @@
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import worker_process_init
 from ..config import settings
+from ..logging_config import setup_logging
+import logging
 
 celery_app = Celery(
     "dota_stats",
@@ -8,6 +11,14 @@ celery_app = Celery(
     backend=settings.CELERY_RESULT_BACKEND,
     include=["app.tasks.sync_tasks"]
 )
+
+
+@worker_process_init.connect
+def setup_celery_logging(**kwargs):
+    """Setup logging when Celery worker process initializes"""
+    setup_logging(log_level=settings.LOG_LEVEL, log_file_path="/app/logs/celery.log")
+    logger = logging.getLogger(__name__)
+    logger.info(f"Celery worker logging initialized with level: {settings.LOG_LEVEL}")
 
 celery_app.conf.update(
     task_serializer="json",

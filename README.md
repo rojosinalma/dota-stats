@@ -168,21 +168,53 @@ docker compose exec backend python cli.py init-heroes
 
 ## Development
 
-### Backend Development
+### Development Mode with Hot-Reload (Recommended)
 
-Run the backend in development mode with hot reload:
+The easiest way to develop is using the development Docker Compose configuration which provides hot-reload for all services:
+
+```bash
+# Start all services in development mode
+docker compose -f compose.dev.yaml up
+
+# Or run in background
+docker compose -f compose.dev.yaml up -d
+```
+
+**What you get with dev mode:**
+- ✅ **Backend Hot-Reload** - FastAPI automatically restarts when you change Python files
+- ✅ **Frontend Hot-Reload** - Vite dev server with instant updates (no page refresh needed)
+- ✅ **Celery Auto-Restart** - Worker automatically restarts when task files change
+- ✅ **Volume Mounts** - All code changes reflect immediately without rebuilding
+- ✅ **Debug Logging** - More verbose logging for troubleshooting
+
+**Services:**
+- Frontend: http://localhost:8383
+- Backend API: http://localhost:8282
+- Flower (Celery Monitor): http://localhost:5555
+- RabbitMQ Management: http://localhost:15672
+
+**Rebuild containers after dependency changes:**
+```bash
+# Only needed when you modify requirements.txt or package.json
+docker compose -f compose.dev.yaml build
+docker compose -f compose.dev.yaml up
+```
+
+### Local Development (Without Docker)
+
+If you prefer to run services locally:
+
+#### Backend Development
 
 ```bash
 cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Frontend Development
-
-Run the frontend dev server:
+#### Frontend Development
 
 ```bash
 cd frontend
@@ -192,14 +224,18 @@ npm run dev
 
 The dev server will be available at `http://localhost:3000` with API proxy to the backend.
 
-### Running Celery Worker Locally
+#### Running Celery Worker Locally
 
 ```bash
 cd backend
+# With auto-reload on file changes
+watchmedo auto-restart --directory=. --pattern='*.py' --recursive -- celery -A app.tasks.celery_app worker --loglevel=info
+
+# Or without auto-reload
 celery -A app.tasks.celery_app worker --loglevel=info
 ```
 
-### Running Celery Beat Locally
+#### Running Celery Beat Locally
 
 ```bash
 cd backend

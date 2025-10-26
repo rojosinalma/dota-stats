@@ -13,8 +13,15 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
 
   const handleLogout = async () => {
-    await authAPI.logout()
-    window.location.reload()
+    try {
+      await authAPI.logout()
+      // Force a full page reload to clear all state and redirect to login
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Logout failed:', error)
+      // Even if logout fails, clear the session by reloading
+      window.location.href = '/'
+    }
   }
 
   const isActive = (path: string) => location.pathname === path

@@ -117,7 +117,7 @@ async def get_sync_status(
 
     return {
         "is_syncing": active_job is not None,
-        "active_job": active_job
+        "active_job": SyncJobResponse.model_validate(active_job) if active_job else None
     }
 
 

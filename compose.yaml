@@ -69,7 +69,7 @@ services:
     volumes:
       - ./backend:/app
       - ./logs/celery-worker:/app/logs
-    command: celery -A app.tasks.celery_app worker --loglevel=info --logfile=/app/logs/error.log
+    command: sh -c "celery -A app.tasks.celery_app worker --loglevel=$${LOG_LEVEL:-INFO}"
 
   # Celery Beat (Scheduler)
   celery-beat:
@@ -87,7 +87,7 @@ services:
     volumes:
       - ./backend:/app
       - ./logs/celery-beat:/app/logs
-    command: celery -A app.tasks.celery_app beat --loglevel=info --logfile=/app/logs/error.log
+    command: sh -c "celery -A app.tasks.celery_app beat --loglevel=$${LOG_LEVEL:-INFO}"
 
   # Flower (Celery Monitoring)
   flower:

@@ -3,11 +3,14 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional, List, Dict
 import asyncio
+import logging
 from .celery_app import celery_app
 from ..database import SessionLocal
 from ..models import User, Match, MatchPlayer, SyncJob, PlayerEncountered, Hero
 from ..models.sync_job import JobStatus, JobType
 from ..services import DotaAPIService, SteamAuthService
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseTask(Task):
@@ -29,6 +32,8 @@ class DatabaseTask(Task):
 @celery_app.task(base=DatabaseTask, bind=True)
 def sync_matches(self, user_id: int, job_id: int, job_type: str = "manual_sync"):
     """Main task to sync matches for a user"""
+    logger.info(f"Starting sync task for user_id={user_id}, job_id={job_id}, job_type={job_type}")
+
     db: Session = self.db
     dota_api = DotaAPIService()
     steam_auth = SteamAuthService()
@@ -36,6 +41,7 @@ def sync_matches(self, user_id: int, job_id: int, job_type: str = "manual_sync")
     # Get sync job
     sync_job = db.query(SyncJob).filter(SyncJob.id == job_id).first()
     if not sync_job:
+        logger.error(f"Sync job {job_id} not found")
         return {"error": "Sync job not found"}
 
     # Update job status
@@ -43,19 +49,24 @@ def sync_matches(self, user_id: int, job_id: int, job_type: str = "manual_sync")
     sync_job.started_at = datetime.utcnow()
     sync_job.task_id = self.request.id
     db.commit()
+    logger.info(f"Job {job_id} status updated to RUNNING")
 
     try:
         # Get user
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
+            logger.error(f"User {user_id} not found")
             raise Exception("User not found")
 
         account_id = steam_auth.steam_id_to_account_id(user.steam_id)
+        logger.debug(f"Steam ID {user.steam_id} converted to account_id {account_id}")
 
         # Determine if full or incremental sync
         if job_type == "full_sync":
+            logger.info(f"Starting full sync for user {user_id}")
             result = asyncio.run(sync_all_matches(db, user, account_id, sync_job, dota_api))
         else:
+            logger.info(f"Starting incremental sync for user {user_id}")
             result = asyncio.run(sync_new_matches(db, user, account_id, sync_job, dota_api))
 
         # Update job status
@@ -65,9 +76,11 @@ def sync_matches(self, user_id: int, job_id: int, job_type: str = "manual_sync")
         user.last_sync_at = datetime.utcnow()
         db.commit()
 
+        logger.info(f"Job {job_id} completed successfully. New matches: {result.get('new_matches', 0)}, Total fetched: {result.get('total_fetched', 0)}")
         return result
 
     except Exception as e:
+        logger.error(f"Job {job_id} failed with error: {str(e)}", exc_info=True)
         sync_job.status = JobStatus.FAILED
         sync_job.error_message = str(e)
         sync_job.completed_at = datetime.utcnow()
