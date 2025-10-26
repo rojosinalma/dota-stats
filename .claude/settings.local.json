@@ -6,7 +6,12 @@
       "Bash(docker compose exec:*)",
       "Bash(python -m py_compile:*)",
       "Bash(python -c:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(docker inspect:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker compose:*)",
+      "WebFetch(domain:wiki.teamfortress.com)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

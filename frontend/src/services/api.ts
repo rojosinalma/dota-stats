@@ -63,4 +63,10 @@ export const heroesAPI = {
   getHeroes: () => api.get('/heroes'),
 }
 
+// API Usage
+export const apiUsageAPI = {
+  getSummary: () => api.get('/api-usage/summary'),
+  getDaily: (days?: number) => api.get('/api-usage/daily', { params: { days } }),
+}
+
 export default api

@@ -16,23 +16,28 @@ async def get_matches(
     page_size: int = Query(50, ge=1, le=100),
     hero_id: Optional[int] = None,
     game_mode: Optional[int] = None,
+    lobby_type: Optional[int] = Query(None, description="Filter by lobby type (0=Normal, 7=Ranked, etc)"),
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
+    include_stubs: bool = Query(False, description="Include matches without details (stubs)"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get paginated list of matches with filters"""
-    # Only show matches with details (filter out stubs)
-    query = db.query(Match).filter(
-        Match.user_id == user.id,
-        Match.has_details == True
-    )
+    # Filter matches based on include_stubs parameter
+    query = db.query(Match).filter(Match.user_id == user.id)
+
+    if not include_stubs:
+        # Only show matches with details (filter out stubs)
+        query = query.filter(Match.has_details == True)
 
     # Apply filters
     if hero_id:
         query = query.filter(Match.hero_id == hero_id)
     if game_mode:
         query = query.filter(Match.game_mode == game_mode)
+    if lobby_type is not None:
+        query = query.filter(Match.lobby_type == lobby_type)
     if start_date:
         query = query.filter(Match.start_time >= start_date)
     if end_date:

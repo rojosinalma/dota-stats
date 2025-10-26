@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Matches from './pages/Matches'
 import MatchDetail from './pages/MatchDetail'
 import HeroStats from './pages/HeroStats'
+import Settings from './pages/Settings'
 import Login from './pages/Login'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
         <Route path="/matches" element={<Matches />} />
         <Route path="/matches/:matchId" element={<MatchDetail />} />
         <Route path="/heroes" element={<HeroStats />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

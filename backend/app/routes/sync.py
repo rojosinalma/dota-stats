@@ -6,7 +6,7 @@ from ..database import get_db
 from ..models import User, SyncJob
 from ..models.sync_job import JobStatus, JobType
 from ..schemas import SyncJobResponse, SyncJobCreate
-from ..tasks import sync_matches_full, sync_matches_incremental, sync_matches, collect_match_ids, fetch_match_details
+from ..tasks import collect_match_ids, fetch_match_details
 from ..tasks.celery_app import celery_app
 from .auth import get_current_user
 
@@ -49,24 +49,73 @@ async def trigger_sync(
     db.commit()
     db.refresh(sync_job)
 
-    # Trigger appropriate task
-    if job_type == JobType.FULL_SYNC:
-        task = sync_matches_full.delay(user.id, sync_job.id)
-    elif job_type == JobType.INCREMENTAL_SYNC:
-        task = sync_matches_incremental.delay(user.id, sync_job.id)
-    elif job_type == JobType.COLLECT_MATCH_IDS:
-        # Collect match IDs (can be full or incremental based on parameters)
+    # Trigger appropriate task based on job type
+    if job_type == JobType.SYNC_ALL:
+        # New: Sync All - collect all IDs then fetch all details
+        # Create job for collecting IDs
         task = collect_match_ids.delay(user.id, sync_job.id, full_sync=True)
-    elif job_type == JobType.FETCH_MATCH_DETAILS:
-        # Fetch details for all stubs
+        sync_job.task_id = task.id
+        db.commit()
+
+        # Create second job for fetching details (will run after ID collection completes)
+        details_job = SyncJob(
+            user_id=user.id,
+            job_type=JobType.FETCH_MATCH_DETAILS,
+            status=JobStatus.PENDING
+        )
+        db.add(details_job)
+        db.commit()
+        db.refresh(details_job)
+
+        # Chain the tasks: fetch details after collecting IDs
+        fetch_match_details.apply_async((user.id, details_job.id), link_error=None)
+
+    elif job_type == JobType.SYNC_MISSING:
+        # New: Sync Missing - only fetch details for existing stubs (no ID collection)
         task = fetch_match_details.delay(user.id, sync_job.id)
+        sync_job.task_id = task.id
+        db.commit()
+
+    elif job_type == JobType.SYNC_INCREMENTAL:
+        # New: Sync Incremental - collect new IDs then fetch their details
+        # Create job for collecting new IDs
+        task = collect_match_ids.delay(user.id, sync_job.id, full_sync=False)
+        sync_job.task_id = task.id
+        db.commit()
+
+        # Create second job for fetching details
+        details_job = SyncJob(
+            user_id=user.id,
+            job_type=JobType.FETCH_MATCH_DETAILS,
+            status=JobStatus.PENDING
+        )
+        db.add(details_job)
+        db.commit()
+        db.refresh(details_job)
+
+        # Chain the tasks
+        fetch_match_details.apply_async((user.id, details_job.id), link_error=None)
+
+    elif job_type == JobType.COLLECT_MATCH_IDS:
+        # Direct: Collect match IDs only
+        task = collect_match_ids.delay(user.id, sync_job.id, full_sync=True)
+        sync_job.task_id = task.id
+        db.commit()
+
+    elif job_type == JobType.FETCH_MATCH_DETAILS:
+        # Direct: Fetch details for all stubs
+        task = fetch_match_details.delay(user.id, sync_job.id)
+        sync_job.task_id = task.id
+        db.commit()
+
     else:
-        task = sync_matches.delay(user.id, sync_job.id, "manual_sync")
+        # Invalid job type
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid job type: {job_type}"
+        )
 
-    sync_job.task_id = task.id
-    db.commit()
     db.refresh(sync_job)
-
     return sync_job
 
 

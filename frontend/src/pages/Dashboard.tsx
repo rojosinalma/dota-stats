@@ -1,43 +1,15 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { statsAPI, syncAPI } from '../services/api'
-import { formatPercentage, formatNumber, calculateKDA } from '../utils/formatters'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { useQuery } from '@tanstack/react-query'
+import { statsAPI } from '../services/api'
+import { formatPercentage, formatNumber } from '../utils/formatters'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import './Dashboard.css'
 
 export default function Dashboard() {
-  const queryClient = useQueryClient()
-  const [syncType, setSyncType] = useState<'incremental_sync' | 'full_sync'>('incremental_sync')
-
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
       const response = await statsAPI.getDashboard()
       return response.data
-    },
-  })
-
-  const { data: syncStatus } = useQuery({
-    queryKey: ['sync', 'status'],
-    queryFn: async () => {
-      const response = await syncAPI.getStatus()
-      return response.data
-    },
-    refetchInterval: 5000,
-  })
-
-  const triggerSync = useMutation({
-    mutationFn: () => syncAPI.trigger(syncType),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sync', 'status'] })
-    },
-  })
-
-  const cancelSync = useMutation({
-    mutationFn: (jobId: number) => syncAPI.cancel(jobId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sync', 'status'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 
@@ -59,74 +31,7 @@ export default function Dashboard() {
           <h1>Dashboard</h1>
           <p className="text-secondary">Your Dota 2 statistics overview</p>
         </div>
-        <div className="sync-controls">
-          {!syncStatus?.is_syncing && (
-            <div className="sync-type-selector">
-              <label>
-                <input
-                  type="radio"
-                  value="incremental_sync"
-                  checked={syncType === 'incremental_sync'}
-                  onChange={(e) => setSyncType(e.target.value as 'incremental_sync')}
-                />
-                <span>New Matches Only</span>
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  value="full_sync"
-                  checked={syncType === 'full_sync'}
-                  onChange={(e) => setSyncType(e.target.value as 'full_sync')}
-                />
-                <span>Full Sync (All Matches)</span>
-              </label>
-            </div>
-          )}
-          {syncStatus?.is_syncing ? (
-            <button
-              onClick={() => syncStatus?.active_job?.id && cancelSync.mutate(syncStatus.active_job.id)}
-              disabled={cancelSync.isPending}
-              className="btn-secondary"
-            >
-              {cancelSync.isPending ? 'Cancelling...' : 'Cancel Sync'}
-            </button>
-          ) : (
-            <button
-              onClick={() => triggerSync.mutate()}
-              disabled={triggerSync.isPending}
-              className="btn-primary"
-            >
-              {triggerSync.isPending ? 'Starting...' : 'Sync Matches'}
-            </button>
-          )}
-        </div>
       </div>
-
-      {syncStatus?.is_syncing && syncStatus?.active_job && (
-        <div className="sync-status card">
-          <div className="sync-info">
-            <span>Syncing matches...</span>
-            <span>
-              {syncStatus.active_job.processed_matches} /{' '}
-              {syncStatus.active_job.total_matches || '?'}
-            </span>
-          </div>
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{
-                width: `${
-                  syncStatus.active_job.total_matches > 0
-                    ? (syncStatus.active_job.processed_matches /
-                        syncStatus.active_job.total_matches) *
-                      100
-                    : 0
-                }%`,
-              }}
-            ></div>
-          </div>
-        </div>
-      )}
 
       <div className="stats-grid">
         <div className="stat-card card">

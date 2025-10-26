@@ -13,9 +13,12 @@ class JobStatus(str, enum.Enum):
 
 
 class JobType(str, enum.Enum):
-    FULL_SYNC = "full_sync"
-    INCREMENTAL_SYNC = "incremental_sync"
-    MANUAL_SYNC = "manual_sync"
+    # User-facing sync options
+    SYNC_ALL = "sync_all"
+    SYNC_MISSING = "sync_missing"
+    SYNC_INCREMENTAL = "sync_incremental"
+
+    # Internal phase jobs (created automatically)
     COLLECT_MATCH_IDS = "collect_match_ids"
     FETCH_MATCH_DETAILS = "fetch_match_details"
 

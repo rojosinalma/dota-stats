@@ -10,7 +10,6 @@ celery_app = Celery(
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
     include=[
-        "app.tasks.sync_matches_task",
         "app.tasks.collect_match_ids_task",
         "app.tasks.fetch_match_details_task",
         "app.tasks.periodic_sync_task",

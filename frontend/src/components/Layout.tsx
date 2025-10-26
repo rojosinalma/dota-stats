@@ -53,6 +53,12 @@ export default function Layout({ children }: LayoutProps) {
             >
               Heroes
             </Link>
+            <Link
+              to="/settings"
+              className={`nav-link ${isActive('/settings') ? 'active' : ''}`}
+            >
+              Settings
+            </Link>
           </div>
 
           <div className="navbar-user">

@@ -21,22 +21,32 @@ class DotaAPIService:
             )
         else:
             self.api = OpenDotaAPI(
-                rate_limit_delay=settings.OPENDOTA_RATE_LIMIT_DELAY
+                rate_limit_delay=settings.OPENDOTA_RATE_LIMIT_DELAY,
+                api_key=settings.OPENDOTA_API_KEY
             )
 
     async def get_match_history(
         self,
         account_id: int,
         matches_requested: int = 100,
-        start_at_match_id: Optional[int] = None
+        start_at_match_id: Optional[int] = None,
+        db = None
     ) -> List[Dict]:
         """Get match history for a player"""
+        # Only pass db to OpenDota API for tracking
+        if self.provider == "opendota":
+            return await self.api.get_match_history(
+                account_id, matches_requested, start_at_match_id, db
+            )
         return await self.api.get_match_history(
             account_id, matches_requested, start_at_match_id
         )
 
-    async def get_match_details(self, match_id: int) -> Optional[Dict]:
+    async def get_match_details(self, match_id: int, db = None) -> Optional[Dict]:
         """Get detailed match information"""
+        # Only pass db to OpenDota API for tracking
+        if self.provider == "opendota":
+            return await self.api.get_match_details(match_id, db)
         return await self.api.get_match_details(match_id)
 
     async def get_heroes(self) -> List[Dict]:

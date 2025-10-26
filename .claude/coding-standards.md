@@ -178,18 +178,27 @@ Each Celery task must be in its own file for clarity:
 backend/app/tasks/
 ├── __init__.py                    # Export all tasks
 ├── celery_app.py                  # Celery app configuration
-├── sync_helpers.py                # Shared helper functions
-├── sync_matches_task.py           # Main sync task (legacy, combines both phases)
+├── sync_helpers.py                # Shared helper functions (phase logic, stubs, updates)
 ├── collect_match_ids_task.py      # Phase 1: Collect match IDs
 ├── fetch_match_details_task.py    # Phase 2: Fetch match details
 └── periodic_sync_task.py          # Periodic sync for all users
 ```
+
+**Sync Architecture:**
+- All sync operations use two-phase approach:
+  - Phase 1: Collect match IDs (fast, reliable)
+  - Phase 2: Fetch match details (can fail, retryable)
+- Three user-facing options:
+  - `SYNC_ALL`: Collect all historical IDs + fetch all details
+  - `SYNC_MISSING`: Skip ID collection, only fetch details for stubs
+  - `SYNC_INCREMENTAL`: Collect new IDs + fetch their details
 
 **Benefits:**
 - Easy to find specific tasks
 - Clear separation of concerns
 - Simpler imports and dependencies
 - Better for code review and maintenance
+- Never lose match IDs even if API fails
 
 ## Security Standards
 

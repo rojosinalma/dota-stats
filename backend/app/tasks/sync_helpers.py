@@ -29,34 +29,73 @@ async def collect_match_ids_phase(
     if full_sync:
         # Full sync: collect all historical matches
         logger.info(f"Full sync: Collecting all match IDs for user {user.id}")
-        start_at_match_id = None
 
-        while True:
-            matches = await dota_api.get_match_history(
-                account_id=account_id,
-                matches_requested=100,
-                start_at_match_id=start_at_match_id
-            )
+        # Determine pagination method based on API provider
+        from ..config import settings
+        is_opendota = settings.API_PROVIDER == "opendota"
 
-            if not matches:
-                break
+        if is_opendota:
+            # OpenDota uses offset-based pagination
+            offset = 0
 
-            for match_summary in matches:
-                match_id = match_summary.get("match_id")
-                start_at_match_id = match_id  # For pagination
+            while True:
+                matches = await dota_api.get_match_history(
+                    account_id=account_id,
+                    matches_requested=100,
+                    start_at_match_id=offset,  # OpenDota interprets this as offset
+                    db=db
+                )
 
-                # Save stub (or get existing)
-                save_match_stub(db, user.id, match_id)
-                match_ids_collected += 1
+                if not matches:
+                    break
 
-            # Update progress after each batch
-            sync_job.total_matches = match_ids_collected
-            db.commit()
+                for match_summary in matches:
+                    match_id = match_summary.get("match_id")
 
-            logger.info(f"Collected {match_ids_collected} match IDs so far")
+                    # Save stub (or get existing)
+                    save_match_stub(db, user.id, match_id)
+                    match_ids_collected += 1
 
-            if len(matches) < 100:
-                break
+                # Update progress after each batch
+                offset += len(matches)
+                sync_job.total_matches = match_ids_collected
+                db.commit()
+
+                logger.info(f"Collected {match_ids_collected} match IDs so far (offset: {offset})")
+
+                if len(matches) < 100:
+                    break
+        else:
+            # Valve API uses match_id-based pagination
+            start_at_match_id = None
+
+            while True:
+                matches = await dota_api.get_match_history(
+                    account_id=account_id,
+                    matches_requested=100,
+                    start_at_match_id=start_at_match_id,
+                    db=db
+                )
+
+                if not matches:
+                    break
+
+                for match_summary in matches:
+                    match_id = match_summary.get("match_id")
+                    start_at_match_id = match_id  # For pagination
+
+                    # Save stub (or get existing)
+                    save_match_stub(db, user.id, match_id)
+                    match_ids_collected += 1
+
+                # Update progress after each batch
+                sync_job.total_matches = match_ids_collected
+                db.commit()
+
+                logger.info(f"Collected {match_ids_collected} match IDs so far")
+
+                if len(matches) < 100:
+                    break
     else:
         # Incremental sync: collect only new matches
         logger.info(f"Incremental sync: Collecting new match IDs for user {user.id}")
@@ -77,7 +116,8 @@ async def collect_match_ids_phase(
         # Fetch recent matches
         matches = await dota_api.get_match_history(
             account_id=account_id,
-            matches_requested=100
+            matches_requested=100,
+            db=db
         )
 
         for match_summary in matches:
@@ -140,7 +180,7 @@ async def fetch_match_details_phase(
         logger.debug(f"Fetching details for match_id={match.id} (attempt {match.retry_count + 1})")
 
         try:
-            match_details = await dota_api.get_match_details(match.id)
+            match_details = await dota_api.get_match_details(match.id, db=db)
             error_code = None
         except APIException as e:
             match_details = None

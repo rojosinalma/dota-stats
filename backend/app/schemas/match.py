@@ -26,27 +26,32 @@ class MatchPlayerResponse(BaseModel):
 
 class MatchResponse(BaseModel):
     id: int
-    start_time: datetime
-    duration: int
-    game_mode: int
-    lobby_type: int
-    radiant_win: bool
-    hero_id: int
-    player_slot: int
-    radiant_team: bool
-    kills: int
-    deaths: int
-    assists: int
+    has_details: Optional[bool] = None
+    start_time: Optional[datetime] = None
+    duration: Optional[int] = None
+    game_mode: Optional[int] = None
+    lobby_type: Optional[int] = None
+    radiant_win: Optional[bool] = None
+    hero_id: Optional[int] = None
+    player_slot: Optional[int] = None
+    radiant_team: Optional[bool] = None
+    kills: Optional[int] = None
+    deaths: Optional[int] = None
+    assists: Optional[int] = None
     gold_per_min: Optional[int] = None
     xp_per_min: Optional[int] = None
     hero_damage: Optional[int] = None
 
     @property
-    def won(self) -> bool:
+    def won(self) -> Optional[bool]:
+        if self.radiant_team is None or self.radiant_win is None:
+            return None
         return self.radiant_team == self.radiant_win
 
     @property
-    def kda_ratio(self) -> float:
+    def kda_ratio(self) -> Optional[float]:
+        if self.kills is None or self.deaths is None or self.assists is None:
+            return None
         if self.deaths == 0:
             return float(self.kills + self.assists)
         return (self.kills + self.assists) / self.deaths

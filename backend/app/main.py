@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import init_db
-from .routes import auth_router, matches_router, stats_router, sync_router, heroes_router
+from .routes import auth_router, matches_router, stats_router, sync_router, heroes_router, api_usage_router
 from .config import settings
 from .logging_config import setup_logging
 import logging
@@ -31,6 +31,7 @@ app.include_router(matches_router)
 app.include_router(stats_router)
 app.include_router(sync_router)
 app.include_router(heroes_router)
+app.include_router(api_usage_router)
 
 
 @app.on_event("startup")

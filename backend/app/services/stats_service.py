@@ -19,7 +19,11 @@ class StatsService:
         end_date: Optional[datetime] = None,
     ) -> PlayerStats:
         """Get overall player statistics"""
-        query = self.db.query(Match).filter(Match.user_id == user_id)
+        # Only query matches with details (not stubs)
+        query = self.db.query(Match).filter(
+            Match.user_id == user_id,
+            Match.has_details == True
+        )
 
         # Apply filters
         query = self._apply_filters(query, hero_id, game_mode, start_date, end_date)
@@ -38,15 +42,15 @@ class StatsService:
             total_wins=wins,
             total_losses=losses,
             win_rate=(wins / total_matches * 100) if total_matches > 0 else 0,
-            avg_kills=sum(m.kills for m in matches) / total_matches,
-            avg_deaths=sum(m.deaths for m in matches) / total_matches,
-            avg_assists=sum(m.assists for m in matches) / total_matches,
+            avg_kills=sum(m.kills or 0 for m in matches) / total_matches,
+            avg_deaths=sum(m.deaths or 0 for m in matches) / total_matches,
+            avg_assists=sum(m.assists or 0 for m in matches) / total_matches,
             avg_kda=self._calculate_avg_kda(matches),
             avg_gpm=sum(m.gold_per_min or 0 for m in matches) / total_matches if any(m.gold_per_min for m in matches) else None,
             avg_xpm=sum(m.xp_per_min or 0 for m in matches) / total_matches if any(m.xp_per_min for m in matches) else None,
             most_played_heroes=self.get_hero_stats(user_id, limit=5),
             recent_matches=total_matches,
-            last_match_time=max(m.start_time for m in matches).isoformat() if matches else None,
+            last_match_time=max(m.start_time for m in matches if m.start_time).isoformat() if any(m.start_time for m in matches) else None,
         )
 
     def get_hero_stats(
@@ -59,7 +63,11 @@ class StatsService:
         limit: Optional[int] = None,
     ) -> List[HeroStats]:
         """Get per-hero statistics"""
-        query = self.db.query(Match).filter(Match.user_id == user_id)
+        # Only query matches with details (not stubs)
+        query = self.db.query(Match).filter(
+            Match.user_id == user_id,
+            Match.has_details == True
+        )
         query = self._apply_filters(query, hero_id, game_mode, start_date, end_date)
 
         matches = query.all()
@@ -84,9 +92,9 @@ class StatsService:
                 wins=wins,
                 losses=losses,
                 win_rate=(wins / total_games * 100) if total_games > 0 else 0,
-                avg_kills=sum(m.kills for m in hero_matches) / total_games,
-                avg_deaths=sum(m.deaths for m in hero_matches) / total_games,
-                avg_assists=sum(m.assists for m in hero_matches) / total_games,
+                avg_kills=sum(m.kills or 0 for m in hero_matches) / total_games,
+                avg_deaths=sum(m.deaths or 0 for m in hero_matches) / total_games,
+                avg_assists=sum(m.assists or 0 for m in hero_matches) / total_games,
                 avg_kda=self._calculate_avg_kda(hero_matches),
                 avg_gpm=sum(m.gold_per_min or 0 for m in hero_matches) / total_games if any(m.gold_per_min for m in hero_matches) else None,
                 avg_xpm=sum(m.xp_per_min or 0 for m in hero_matches) / total_games if any(m.xp_per_min for m in hero_matches) else None,
@@ -208,13 +216,19 @@ class StatsService:
             return 0.0
 
         total_kda = 0.0
+        valid_matches = 0
         for match in matches:
+            # Skip stub matches with no data
+            if match.kills is None or match.deaths is None or match.assists is None:
+                continue
+
+            valid_matches += 1
             if match.deaths == 0:
                 total_kda += float(match.kills + match.assists)
             else:
                 total_kda += (match.kills + match.assists) / match.deaths
 
-        return total_kda / len(matches)
+        return total_kda / valid_matches if valid_matches > 0 else 0.0
 
     @staticmethod
     def _get_period_start_date(now: datetime, period: str) -> datetime:

@@ -5,7 +5,7 @@ from ..models.sync_job import JobStatus, JobType
 
 
 class SyncJobCreate(BaseModel):
-    job_type: JobType = JobType.MANUAL_SYNC
+    job_type: JobType = JobType.SYNC_INCREMENTAL
 
 
 class SyncJobResponse(BaseModel):
