@@ -1,0 +1,14 @@
+.hero-stats-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.hero-name-cell {
+  font-weight: 600;
+}
+
+.kda-highlight {
+  font-weight: 700;
+  color: var(--accent);
+}

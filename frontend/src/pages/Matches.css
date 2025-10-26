@@ -1,0 +1,66 @@
+.matches-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.25rem;
+}
+
+.matches-table {
+  overflow-x: auto;
+}
+
+.match-result {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.match-result.win {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.match-result.loss {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.kda-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.kda-ratio {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.btn-small {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pagination-info {
+  color: var(--text-secondary);
+}
