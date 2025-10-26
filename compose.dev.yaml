@@ -39,8 +39,6 @@ services:
     container_name: dota-stats-backend-dev
     env_file:
       - .env
-    environment:
-      - DEBUG=true
     ports:
       - "8282:8000"
     depends_on:
@@ -68,7 +66,7 @@ services:
     volumes:
       - ./backend:/app
       - ./logs/celery-worker:/app/logs
-    command: celery -A app.tasks.celery_app worker --loglevel=debug --logfile=/app/logs/error.log
+    command: sh -c "watchmedo auto-restart --directory=/app --pattern='*.py' --recursive -- celery -A app.tasks.celery_app worker --loglevel=$${LOG_LEVEL:-DEBUG}"
 
   celery-beat:
     build:
@@ -85,7 +83,7 @@ services:
     volumes:
       - ./backend:/app
       - ./logs/celery-beat:/app/logs
-    command: celery -A app.tasks.celery_app beat --loglevel=debug --logfile=/app/logs/error.log
+    command: sh -c "celery -A app.tasks.celery_app beat --loglevel=$${LOG_LEVEL:-DEBUG}"
 
   # Flower (Celery Monitoring)
   flower:

@@ -22,7 +22,11 @@ async def get_matches(
     db: Session = Depends(get_db)
 ):
     """Get paginated list of matches with filters"""
-    query = db.query(Match).filter(Match.user_id == user.id)
+    # Only show matches with details (filter out stubs)
+    query = db.query(Match).filter(
+        Match.user_id == user.id,
+        Match.has_details == True
+    )
 
     # Apply filters
     if hero_id:

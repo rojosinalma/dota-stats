@@ -5,7 +5,6 @@ from typing import Literal
 class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Dota Stats"
-    DEBUG: bool = False
     LOG_LEVEL: Literal["INFO", "DEBUG"] = "INFO"
 
     # Database

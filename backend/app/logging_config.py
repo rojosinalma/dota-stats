@@ -27,8 +27,21 @@ def setup_logging(log_level: str = "INFO", log_file_path: str = "/app/logs/app.l
     root_logger = logging.getLogger()
     root_logger.setLevel(numeric_level)
 
-    # Remove existing handlers to avoid duplicates
-    root_logger.handlers.clear()
+    # Check if our handlers are already present to avoid duplicates
+    # Don't clear all handlers as this removes Celery's logging
+    has_console = any(isinstance(h, logging.StreamHandler) and h.stream == sys.stdout
+                      for h in root_logger.handlers)
+    has_file = any(isinstance(h, RotatingFileHandler) and h.baseFilename == str(log_path)
+                   for h in root_logger.handlers)
+
+    if has_console and has_file:
+        # Already configured, just update levels
+        for handler in root_logger.handlers:
+            if isinstance(handler, logging.StreamHandler) and handler.stream == sys.stdout:
+                handler.setLevel(numeric_level)
+            elif isinstance(handler, RotatingFileHandler) and handler.baseFilename == str(log_path):
+                handler.setLevel(numeric_level)
+        return root_logger
 
     # Console handler (stdout) - matches root logger level
     console_handler = logging.StreamHandler(sys.stdout)

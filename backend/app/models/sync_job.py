@@ -16,6 +16,8 @@ class JobType(str, enum.Enum):
     FULL_SYNC = "full_sync"
     INCREMENTAL_SYNC = "incremental_sync"
     MANUAL_SYNC = "manual_sync"
+    COLLECT_MATCH_IDS = "collect_match_ids"
+    FETCH_MATCH_DETAILS = "fetch_match_details"
 
 
 class SyncJob(Base):

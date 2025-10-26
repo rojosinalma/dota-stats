@@ -9,21 +9,29 @@ class Match(Base):
 
     id = Column(BigInteger, primary_key=True, index=True)  # Match ID
     user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
-    start_time = Column(DateTime(timezone=True), nullable=False, index=True)
-    duration = Column(Integer, nullable=False)  # Duration in seconds
-    game_mode = Column(Integer, nullable=False, index=True)
-    lobby_type = Column(Integer, nullable=False, index=True)
-    radiant_win = Column(Boolean, nullable=False)
+
+    # Two-phase sync columns
+    has_details = Column(Boolean, nullable=True, index=True)  # NULL=stub, TRUE=complete, FALSE=failed
+    retry_count = Column(Integer, nullable=False, default=0)
+    last_fetch_attempt = Column(DateTime(timezone=True), nullable=True)
+    fetch_error = Column(String, nullable=True)
+
+    # Match data (nullable to support stubs without details)
+    start_time = Column(DateTime(timezone=True), nullable=True, index=True)
+    duration = Column(Integer, nullable=True)  # Duration in seconds
+    game_mode = Column(Integer, nullable=True, index=True)
+    lobby_type = Column(Integer, nullable=True, index=True)
+    radiant_win = Column(Boolean, nullable=True)
 
     # User-specific match data
-    hero_id = Column(Integer, nullable=False, index=True)
-    player_slot = Column(Integer, nullable=False)
-    radiant_team = Column(Boolean, nullable=False)
+    hero_id = Column(Integer, nullable=True, index=True)
+    player_slot = Column(Integer, nullable=True)
+    radiant_team = Column(Boolean, nullable=True)
 
     # Player stats
-    kills = Column(Integer, nullable=False)
-    deaths = Column(Integer, nullable=False)
-    assists = Column(Integer, nullable=False)
+    kills = Column(Integer, nullable=True)
+    deaths = Column(Integer, nullable=True)
+    assists = Column(Integer, nullable=True)
     last_hits = Column(Integer)
     denies = Column(Integer)
     gold_per_min = Column(Integer)

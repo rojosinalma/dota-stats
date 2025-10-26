@@ -1,8 +1,12 @@
 import httpx
 import asyncio
+import logging
 from typing import List, Dict, Optional
 from ..config import settings
 from datetime import datetime
+from .exceptions import APIException
+
+logger = logging.getLogger(__name__)
 
 
 class OpenDotaAPI:
@@ -35,18 +39,40 @@ class OpenDotaAPI:
             return response.json()
 
     async def get_match_details(self, match_id: int) -> Optional[Dict]:
-        """Get match details using OpenDota API"""
+        """
+        Get match details using OpenDota API
+
+        Raises:
+            APIException: When the API request fails, includes status_code
+        """
         url = f"{self.base_url}/matches/{match_id}"
+
+        logger.debug(f"Fetching match details for match_id={match_id}")
 
         await self._rate_limit_delay()
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
                 response = await client.get(url)
+                logger.debug(f"Match {match_id} response status: {response.status_code}")
                 response.raise_for_status()
-                return response.json()
-            except httpx.HTTPError:
-                return None
+                data = response.json()
+                logger.debug(f"Successfully fetched match details for match_id={match_id}")
+                return data
+            except httpx.HTTPStatusError as e:
+                status_code = e.response.status_code
+                error_text = e.response.text
+                logger.error(f"HTTP error {status_code} fetching match {match_id}: {error_text}")
+                raise APIException(
+                    f"HTTP error fetching match {match_id}: {error_text}",
+                    status_code=status_code
+                )
+            except httpx.RequestError as e:
+                logger.error(f"Request error fetching match {match_id}: {str(e)}")
+                raise APIException(f"Request error fetching match {match_id}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Unexpected error fetching match {match_id}: {str(e)}", exc_info=True)
+                raise APIException(f"Unexpected error fetching match {match_id}: {str(e)}")
 
     async def get_heroes(self) -> List[Dict]:
         """Get heroes using OpenDota API"""

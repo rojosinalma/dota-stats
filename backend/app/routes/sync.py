@@ -6,7 +6,7 @@ from ..database import get_db
 from ..models import User, SyncJob
 from ..models.sync_job import JobStatus, JobType
 from ..schemas import SyncJobResponse, SyncJobCreate
-from ..tasks import sync_matches_full, sync_matches_incremental, sync_matches
+from ..tasks import sync_matches_full, sync_matches_incremental, sync_matches, collect_match_ids, fetch_match_details
 from ..tasks.celery_app import celery_app
 from .auth import get_current_user
 
@@ -54,6 +54,12 @@ async def trigger_sync(
         task = sync_matches_full.delay(user.id, sync_job.id)
     elif job_type == JobType.INCREMENTAL_SYNC:
         task = sync_matches_incremental.delay(user.id, sync_job.id)
+    elif job_type == JobType.COLLECT_MATCH_IDS:
+        # Collect match IDs (can be full or incremental based on parameters)
+        task = collect_match_ids.delay(user.id, sync_job.id, full_sync=True)
+    elif job_type == JobType.FETCH_MATCH_DETAILS:
+        # Fetch details for all stubs
+        task = fetch_match_details.delay(user.id, sync_job.id)
     else:
         task = sync_matches.delay(user.id, sync_job.id, "manual_sync")
 
