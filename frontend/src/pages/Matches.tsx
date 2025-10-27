@@ -14,7 +14,7 @@ import './Matches.css'
 
 export default function Matches() {
   const [page, setPage] = useState(1)
-  const [showStubs, setShowStubs] = useState(false)
+  const [showStubs, setShowStubs] = useState(true)
   const [lobbyTypeFilter, setLobbyTypeFilter] = useState<string>('all')
   const [filters, setFilters] = useState({
     hero_id: undefined as number | undefined,

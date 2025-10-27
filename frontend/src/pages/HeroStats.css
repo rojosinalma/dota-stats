@@ -12,3 +12,11 @@
   font-weight: 700;
   color: var(--accent);
 }
+
+.hero-not-played {
+  opacity: 0.5;
+}
+
+.hero-not-played:hover {
+  opacity: 0.7;
+}

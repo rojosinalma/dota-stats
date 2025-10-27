@@ -15,7 +15,8 @@ export function calculateKDA(kills: number, deaths: number, assists: number): nu
   return (kills + assists) / deaths
 }
 
-export function formatNumber(num: number): string {
+export function formatNumber(num: number | undefined | null): string {
+  if (num === undefined || num === null) return '0'
   return num.toLocaleString()
 }
 

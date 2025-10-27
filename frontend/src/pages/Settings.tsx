@@ -10,7 +10,7 @@ export default function Settings() {
   const queryClient = useQueryClient()
   const [syncOption, setSyncOption] = useState<SyncOption>('sync_incremental')
 
-  const { data: syncJobs, isLoading } = useQuery({
+  const { data: syncJobs, isLoading, error: syncJobsError } = useQuery({
     queryKey: ['sync', 'jobs'],
     queryFn: async () => {
       const response = await syncAPI.getJobs(20)
@@ -24,9 +24,10 @@ export default function Settings() {
       )
       return hasActiveJobs ? 3000 : false
     },
+    throwOnError: false,
   })
 
-  const { data: syncStatus } = useQuery({
+  const { data: syncStatus, error: syncStatusError } = useQuery({
     queryKey: ['sync', 'status'],
     queryFn: async () => {
       const response = await syncAPI.getStatus()
@@ -37,6 +38,7 @@ export default function Settings() {
       const status = query.state.data as any
       return status?.is_syncing ? 3000 : false
     },
+    throwOnError: false,
   })
 
   const triggerSync = useMutation({
@@ -93,12 +95,19 @@ export default function Settings() {
     (job: any) => job.status === 'running' || job.status === 'pending'
   )
 
-  const { data: apiUsage } = useQuery({
+  const { data: apiUsage, error: apiUsageError } = useQuery({
     queryKey: ['api-usage', 'summary'],
     queryFn: async () => {
-      const response = await apiUsageAPI.getSummary()
-      return response.data
+      try {
+        const response = await apiUsageAPI.getSummary()
+        return response.data
+      } catch (error) {
+        console.error('API Usage error:', error)
+        throw error
+      }
     },
+    throwOnError: false,
+    retry: false,
   })
 
   return (
@@ -107,6 +116,21 @@ export default function Settings() {
         <h1>Settings</h1>
         <p className="text-secondary">Manage your sync jobs and preferences</p>
       </div>
+
+      {(syncJobsError || syncStatusError || apiUsageError) && (
+        <div className="card" style={{ marginBottom: '1rem', borderColor: 'var(--danger)' }}>
+          <h3 style={{ color: 'var(--danger)' }}>Error Loading Data</h3>
+          {syncJobsError && (
+            <p className="text-secondary">Failed to load sync jobs: {String(syncJobsError)}</p>
+          )}
+          {syncStatusError && (
+            <p className="text-secondary">Failed to load sync status: {String(syncStatusError)}</p>
+          )}
+          {apiUsageError && (
+            <p className="text-secondary">Failed to load API usage: {String(apiUsageError)}</p>
+          )}
+        </div>
+      )}
 
       <div className="card sync-controls-card">
         <h2>Sync Options</h2>
@@ -186,7 +210,19 @@ export default function Settings() {
       </div>
 
       <div className="card">
-        <h2>Sync Job History</h2>
+        <div className="card-header-with-action">
+          <h2>Sync Job History</h2>
+          {import.meta.env.VITE_FLOWER_URL && (
+            <a
+              href={import.meta.env.VITE_FLOWER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-link"
+            >
+              View in Flower →
+            </a>
+          )}
+        </div>
         {isLoading && !syncJobs ? (
           <div className="loading-screen">
             <div className="spinner"></div>
@@ -288,12 +324,12 @@ export default function Settings() {
                 <>
                   <div className="usage-card">
                     <div className="usage-label">Total Cost</div>
-                    <div className="usage-value cost">${apiUsage.total_cost.toFixed(4)}</div>
+                    <div className="usage-value cost">${(apiUsage.total_cost ?? 0).toFixed(4)}</div>
                   </div>
 
                   <div className="usage-card">
                     <div className="usage-label">Est. Monthly Cost</div>
-                    <div className="usage-value">${apiUsage.estimated_monthly_cost.toFixed(2)}/mo</div>
+                    <div className="usage-value">${(apiUsage.estimated_monthly_cost ?? 0).toFixed(2)}/mo</div>
                   </div>
                 </>
               )}
@@ -306,14 +342,16 @@ export default function Settings() {
               )}
             </div>
 
-            {apiUsage.opendota_stats && (
+            {apiUsage.opendota_stats && apiUsage.opendota_stats.total_calls > 0 && (
               <div className="provider-stats">
                 <h3>OpenDota API</h3>
                 <div className="stats-grid">
                   <div className="stat-item">
                     <span className="stat-label">Success Rate:</span>
                     <span className="stat-value">
-                      {((apiUsage.opendota_stats.success_calls / apiUsage.opendota_stats.total_calls) * 100).toFixed(1)}%
+                      {apiUsage.opendota_stats.total_calls > 0
+                        ? ((apiUsage.opendota_stats.success_calls / apiUsage.opendota_stats.total_calls) * 100).toFixed(1)
+                        : '0.0'}%
                     </span>
                   </div>
                   <div className="stat-item">

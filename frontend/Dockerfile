@@ -10,6 +10,10 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Accept build args for Vite environment variables
+ARG VITE_FLOWER_URL
+ENV VITE_FLOWER_URL=${VITE_FLOWER_URL}
+
 # Build the app
 RUN npm run build
 

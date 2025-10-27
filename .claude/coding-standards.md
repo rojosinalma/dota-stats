@@ -239,6 +239,11 @@ backend/app/tasks/
 - Use React Query for caching
 - Debounce user inputs
 - Optimize images and assets
+- Keep visual styling consistent with existing UI patterns
+- When adding new UI elements, match the style of similar components in the app
+- Use existing CSS classes and patterns before creating new ones
+- Text links use `.text-link` class (accent color, small font, hover underline)
+- Action buttons in card headers use flexbox with space-between
 
 ## Code Review Checklist
 

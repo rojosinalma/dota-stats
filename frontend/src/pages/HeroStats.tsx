@@ -1,16 +1,53 @@
 import { useQuery } from '@tanstack/react-query'
-import { statsAPI } from '../services/api'
+import { statsAPI, heroesAPI } from '../services/api'
 import { formatPercentage } from '../utils/formatters'
 import './HeroStats.css'
 
+interface Hero {
+  id: number
+  name: string
+  localized_name: string
+  primary_attr: string
+  attack_type: string
+  roles: string[]
+  img: string
+  icon: string
+}
+
+interface HeroStat {
+  hero_id: number
+  games_played: number
+  wins: number
+  losses: number
+  win_rate: number
+  avg_kills: number
+  avg_deaths: number
+  avg_assists: number
+  avg_kda: number
+  avg_gpm: number
+  avg_xpm: number
+  total_hero_damage: number
+  total_tower_damage: number
+}
+
 export default function HeroStats() {
-  const { data: heroStats, isLoading } = useQuery({
-    queryKey: ['stats', 'heroes'],
+  const { data: allHeroes, isLoading: isLoadingHeroes } = useQuery({
+    queryKey: ['heroes'],
     queryFn: async () => {
-      const response = await statsAPI.getHeroStats({ limit: 100 })
-      return response.data
+      const response = await heroesAPI.getHeroes()
+      return response.data as Hero[]
     },
   })
+
+  const { data: heroStats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['stats', 'heroes'],
+    queryFn: async () => {
+      const response = await statsAPI.getHeroStats({ limit: 200 })
+      return response.data as HeroStat[]
+    },
+  })
+
+  const isLoading = isLoadingHeroes || isLoadingStats
 
   if (isLoading) {
     return (
@@ -20,13 +57,34 @@ export default function HeroStats() {
     )
   }
 
+  // Merge heroes with their stats
+  const heroesWithStats = allHeroes?.map((hero) => {
+    const stats = heroStats?.find((stat) => stat.hero_id === hero.id)
+    return {
+      hero,
+      stats: stats || null,
+    }
+  }) || []
+
+  // Sort by games played (descending), then alphabetically
+  heroesWithStats.sort((a, b) => {
+    const gamesA = a.stats?.games_played || 0
+    const gamesB = b.stats?.games_played || 0
+    if (gamesB !== gamesA) {
+      return gamesB - gamesA
+    }
+    return a.hero.localized_name.localeCompare(b.hero.localized_name)
+  })
+
+  const heroesPlayed = heroesWithStats.filter((h) => h.stats).length
+
   return (
     <div className="hero-stats-page">
       <div className="page-header">
         <div>
           <h1>Hero Statistics</h1>
           <p className="text-secondary">
-            {heroStats?.length || 0} heroes played
+            {heroesPlayed} of {heroesWithStats.length} heroes played
           </p>
         </div>
       </div>
@@ -47,31 +105,40 @@ export default function HeroStats() {
             </tr>
           </thead>
           <tbody>
-            {heroStats?.map((hero: any) => (
-              <tr key={hero.hero_id}>
-                <td className="hero-name-cell">Hero {hero.hero_id}</td>
-                <td>{hero.games_played}</td>
+            {heroesWithStats.map(({ hero, stats }) => (
+              <tr key={hero.id} className={!stats ? 'hero-not-played' : ''}>
+                <td className="hero-name-cell">{hero.localized_name}</td>
+                <td>{stats?.games_played || 0}</td>
                 <td>
-                  <span className={hero.win_rate >= 50 ? 'text-success' : 'text-danger'}>
-                    {formatPercentage(hero.win_rate)}
-                  </span>
+                  {stats ? (
+                    <span className={stats.win_rate >= 50 ? 'text-success' : 'text-danger'}>
+                      {formatPercentage(stats.win_rate)}
+                    </span>
+                  ) : (
+                    <span className="text-secondary">-</span>
+                  )}
                 </td>
                 <td className="text-secondary">
-                  {hero.wins} - {hero.losses}
+                  {stats ? `${stats.wins} - ${stats.losses}` : '-'}
                 </td>
-                <td className="kda-highlight">{hero.avg_kda.toFixed(2)}</td>
-                <td className="text-secondary">
-                  {hero.avg_kills.toFixed(1)} / {hero.avg_deaths.toFixed(1)} /{' '}
-                  {hero.avg_assists.toFixed(1)}
+                <td className={stats ? 'kda-highlight' : 'text-secondary'}>
+                  {stats ? stats.avg_kda.toFixed(2) : '-'}
                 </td>
                 <td className="text-secondary">
-                  {hero.avg_gpm?.toFixed(0) || 0} / {hero.avg_xpm?.toFixed(0) || 0}
+                  {stats
+                    ? `${stats.avg_kills.toFixed(1)} / ${stats.avg_deaths.toFixed(1)} / ${stats.avg_assists.toFixed(1)}`
+                    : '-'}
                 </td>
                 <td className="text-secondary">
-                  {(hero.total_hero_damage || 0).toLocaleString()}
+                  {stats
+                    ? `${stats.avg_gpm?.toFixed(0) || 0} / ${stats.avg_xpm?.toFixed(0) || 0}`
+                    : '-'}
                 </td>
                 <td className="text-secondary">
-                  {(hero.total_tower_damage || 0).toLocaleString()}
+                  {stats ? (stats.total_hero_damage || 0).toLocaleString() : '-'}
+                </td>
+                <td className="text-secondary">
+                  {stats ? (stats.total_tower_damage || 0).toLocaleString() : '-'}
                 </td>
               </tr>
             ))}

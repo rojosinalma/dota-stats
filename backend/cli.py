@@ -179,5 +179,36 @@ def job_status(user_id: int):
         db.close()
 
 
+@cli.command()
+def clean_stuck_jobs():
+    """Clean up stuck sync jobs (jobs marked as PENDING or RUNNING but no longer active)"""
+    from sqlalchemy.sql import func
+
+    db = SessionLocal()
+    try:
+        # Find all jobs marked as PENDING or RUNNING
+        stuck_jobs = db.query(SyncJob).filter(
+            SyncJob.status.in_([JobStatus.PENDING, JobStatus.RUNNING])
+        ).all()
+
+        if not stuck_jobs:
+            click.echo("No stuck jobs found")
+            return
+
+        click.echo(f"Found {len(stuck_jobs)} stuck jobs")
+
+        for job in stuck_jobs:
+            click.echo(f"  - Job ID: {job.id}, Type: {job.job_type.value}, Created: {job.created_at}")
+            job.status = JobStatus.FAILED
+            job.completed_at = func.now()
+            job.error_message = "Job was stuck and automatically cleaned up"
+
+        db.commit()
+        click.echo(f"Successfully cleaned up {len(stuck_jobs)} stuck jobs")
+
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     cli()
